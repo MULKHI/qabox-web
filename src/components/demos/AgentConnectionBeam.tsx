@@ -1,92 +1,147 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2, ChevronDown,
-  ChevronRight, CircleAlert, Code2, Command, Cpu, Download, ExternalLink,
-  FileCode2, Github, Globe2, Layers3, Menu, Monitor, Play, ScanSearch,
-  ShieldCheck, Sparkles, Terminal, X, Zap, LayoutDashboard, Folder, ListChecks,
-  ClipboardList, Activity, Bot, Plug, Bug, Search, Filter, PanelLeft, Plus, MoreHorizontal,
-  CircleCheck, Settings, Bell, UserRound, Pause, MousePointer2, Workflow, Globe, Smartphone, Mail,
-} from "lucide-react";
-import { Eyebrow, ButtonLink, Brand, SectionHeading, asset } from "../shared";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ClipboardList, Folder, ListChecks, ScanSearch } from "lucide-react";
+
+const resources = [
+  { name: "Test scans", detail: "Captured pages & flows", Icon: ScanSearch, tool: "qabox.list_scans", args: 'project: "customer-portal"', result: "8 scans · 24 components" },
+  { name: "Test cases", detail: "Reusable QA scenarios", Icon: ClipboardList, tool: "qabox.get_test_cases", args: 'suite: "checkout"', result: "12 cases · 3 linked scans" },
+  { name: "App knowledge", detail: "Selectors, behaviors, APIs", Icon: Folder, tool: "qabox.get_knowledge", args: 'page: "/checkout"', result: "16 behaviors · 4 API calls" },
+  { name: "Test runs", detail: "Results & failure evidence", Icon: ListChecks, tool: "qabox.get_runs", args: "limit: 5", result: "19 passed · 5 failed" },
+];
+
+const agents = [
+  { name: "Claude", logo: "/agents/claude.svg" },
+  { name: "Cursor", logo: "/agents/cursor.svg" },
+  { name: "OpenCode", logo: "/agents/opencode.svg" },
+  { name: "Qwen Code", logo: "/agents/qwen.svg" },
+];
+
+type Beam = { d: string; kind: "in" | "out"; index: number };
+
+function curve(x1: number, y1: number, x2: number, y2: number) {
+  const bend = (x2 - x1) * 0.5;
+  return `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`;
+}
 
 export function AgentConnectionBeam() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const resourceRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const resourceRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const agentRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const hubRef = useRef<HTMLDivElement>(null);
-  const agentGroupRef = useRef<HTMLDivElement>(null);
-  const [beamPaths, setBeamPaths] = useState<string[]>([]);
+  const [beams, setBeams] = useState<Beam[]>([]);
+  const [resource, setResource] = useState(0);
+  const [agent, setAgent] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  const resources = [
-    { name: "Test Scans", detail: "Captured app flows", Icon: ScanSearch },
-    { name: "Test Cases", detail: "Reusable QA scenarios", Icon: ClipboardList },
-    { name: "Application Knowledge", detail: "Project context & evidence", Icon: Folder },
-    { name: "Docs App", detail: "Desktop workspace", Icon: Monitor },
-  ];
-  const agents = [
-    { name: "Qwen Code", logo: "/agents/qwen.svg" },
-    { name: "OpenCode", logo: "/agents/opencode.svg" },
-    { name: "Claude", logo: "/agents/claude.svg" },
-  ];
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
     const update = () => {
-      const bounds = container.getBoundingClientRect();
-      const point = (el: HTMLDivElement | null, side: "left" | "right") => {
-        if (!el) return null;
+      const box = stage.getBoundingClientRect();
+      const hub = hubRef.current?.getBoundingClientRect();
+      if (!hub) return;
+      const hubY = hub.top + hub.height / 2 - box.top;
+      const next: Beam[] = [];
+      resourceRefs.current.forEach((el, index) => {
+        if (!el) return;
         const r = el.getBoundingClientRect();
-        return { x: (side === "right" ? r.right : r.left) - bounds.left, y: r.top + r.height / 2 - bounds.top };
-      };
-      const hubIn = point(hubRef.current, "left");
-      const hubOut = point(hubRef.current, "right");
-      const paths: string[] = [];
-      resourceRefs.current.forEach((node) => {
-        const from = point(node, "right");
-        if (!from || !hubIn) return;
-        const bend = Math.max(38, (hubIn.x - from.x) * .48);
-        paths.push(`M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${hubIn.x - bend} ${hubIn.y}, ${hubIn.x} ${hubIn.y}`);
+        next.push({ kind: "in", index, d: curve(r.right - box.left, r.top + r.height / 2 - box.top, hub.left - box.left, hubY) });
       });
-      const agent = point(agentGroupRef.current, "left");
-      if (hubOut && agent) {
-        const bend = Math.max(38, (agent.x - hubOut.x) * .48);
-        paths.push(`M ${hubOut.x} ${hubOut.y} C ${hubOut.x + bend} ${hubOut.y}, ${agent.x - bend} ${agent.y}, ${agent.x} ${agent.y}`);
-      }
-      setBeamPaths(paths);
+      agentRefs.current.forEach((el, index) => {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        next.push({ kind: "out", index, d: curve(hub.right - box.left, hubY, r.left - box.left, r.top + r.height / 2 - box.top) });
+      });
+      setBeams(next);
     };
     update();
     const observer = new ResizeObserver(update);
-    observer.observe(container);
-    [...resourceRefs.current, hubRef.current, agentGroupRef.current].forEach(el => el && observer.observe(el));
-    window.addEventListener("resize", update);
-    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+    observer.observe(stage);
+    return () => observer.disconnect();
   }, []);
 
-  return <div className="agent-beam agent-beam-flow" ref={containerRef} aria-label="QaBox QA resources connect through QaBox MCP to a selected AI agent">
-    <svg className="agent-beam-lines" aria-hidden="true">
-      <defs><linearGradient id="qabox-mcp-beam" x1="0" x2="1"><stop offset="0%" stopColor="#64748b" stopOpacity=".15"/><stop offset="52%" stopColor="#38bdf8" stopOpacity=".8"/><stop offset="100%" stopColor="#64748b" stopOpacity=".2"/></linearGradient></defs>
-      {beamPaths.map((d, i) => <g key={i}><path className="agent-beam-track" d={d}/><path className="agent-beam-pulse" d={d} style={{ animationDelay: `${i * -.65}s` }}/></g>)}
-    </svg>
-    <div className="agent-beam-column agent-beam-resources">
-      <div className="agent-beam-column-title">QABOX QA RESOURCES</div>
-      {resources.map(({ name, detail, Icon }, i) => <div className="agent-beam-node agent-beam-resource" key={name} ref={el => { resourceRefs.current[i] = el; }}>
-        <span className="agent-beam-resource-icon"><Icon size={17}/></span>
-        <span className="agent-beam-label"><b>{name}</b><small>{detail}</small></span>
-      </div>)}
-    </div>
-    <div className="agent-beam-hub" ref={hubRef}>
-      <span className="agent-beam-hub-logo"><img src="/qabox-logo.png" alt="" /></span>
-      <b>QaBox MCP</b>
-      <small>TOOLS &amp; CONTEXT</small>
-    </div>
-    <div className="agent-beam-column agent-beam-agents">
-      <div className="agent-beam-column-title">YOUR AI AGENT</div>
-      <div className="agent-beam-agent-list" ref={agentGroupRef}>
-        {agents.map(({ name, logo }) => <div className="agent-beam-agent-option" key={name}>
-          <span className="agent-beam-logo"><img src={logo} alt="" /></span><b>{name}</b>
-        </div>)}
-        <span className="agent-beam-agent-note">Choose the agent you already use</span>
+  useEffect(() => {
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => {
+      setResource((r) => {
+        const next = (r + 1) % resources.length;
+        if (next === 0) setAgent((a) => (a + 1) % agents.length);
+        return next;
+      });
+    }, 2600);
+    return () => window.clearInterval(id);
+  }, [paused]);
+
+  const active = resources[resource];
+
+  return (
+    <div className="mcpx" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div className="mcpx-stage" ref={stageRef}>
+        <svg className="mcpx-lines" aria-hidden="true">
+          {beams.map((b) => {
+            const on = b.kind === "in" ? b.index === resource : b.index === agent;
+            return (
+              <g key={`${b.kind}-${b.index}`} className={on ? "is-on" : undefined}>
+                <path className="mcpx-track" d={b.d} />
+                {on && <path key={`${resource}-${agent}`} className="mcpx-pulse" d={b.d} pathLength={1} />}
+              </g>
+            );
+          })}
+        </svg>
+
+        <div className="mcpx-col">
+          <span className="mcpx-col-title">Project resources</span>
+          {resources.map(({ name, detail, Icon }, i) => (
+            <button
+              key={name}
+              type="button"
+              ref={(el) => { resourceRefs.current[i] = el; }}
+              className={`mcpx-node${i === resource ? " is-on" : ""}`}
+              onClick={() => setResource(i)}
+              onFocus={() => setResource(i)}
+              aria-pressed={i === resource}
+            >
+              <span className="mcpx-node-icon"><Icon size={16} aria-hidden="true" /></span>
+              <span className="mcpx-node-text"><b>{name}</b><small>{detail}</small></span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mcpx-hub-wrap">
+          <div className="mcpx-hub" ref={hubRef}>
+            <span className="mcpx-hub-ring" aria-hidden="true" />
+            <img src="/qabox-logo.png" alt="" width={36} height={36} />
+            <b>QaBox MCP</b>
+            <small>localhost · stdio</small>
+          </div>
+        </div>
+
+        <div className="mcpx-col mcpx-col-right">
+          <span className="mcpx-col-title">Your agent</span>
+          {agents.map(({ name, logo }, i) => (
+            <button
+              key={name}
+              type="button"
+              ref={(el) => { agentRefs.current[i] = el; }}
+              className={`mcpx-agent${i === agent ? " is-on" : ""}`}
+              onClick={() => setAgent(i)}
+              onFocus={() => setAgent(i)}
+              aria-pressed={i === agent}
+            >
+              <span className="mcpx-agent-logo"><img src={logo} alt="" width={18} height={18} /></span>
+              <b>{name}</b>
+              <span className="mcpx-dot" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mcpx-log" aria-live="polite">
+        <span className="mcpx-log-who">{agents[agent].name}</span>
+        <code>
+          <span className="mcpx-fn">{active.tool}</span>({active.args})
+        </code>
+        <span className="mcpx-log-result">→ {active.result}</span>
       </div>
     </div>
-  </div>;
+  );
 }

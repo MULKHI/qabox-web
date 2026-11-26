@@ -54,16 +54,19 @@ export function HomePage() {
         </section>
 
         <section className="qx-section qx-section-band" id="agents">
-          <div className="qx-container split2 split2-rev">
-            <div className="split2-copy">
-              <span className="qx-kicker">MCP</span>
-              <h2>Bring whichever agent you already like.</h2>
-              <p>
-                QaBox runs a local MCP server. Connect Claude, Cursor, OpenCode or Qwen and the agent can read your
-                project&apos;s scans, cases and run history as tools. The extension still does the clicking, so the
-                agent never gets a browser of its own.
-              </p>
-              <a className="qx-link-arrow" href="/docs#automation">Set up an MCP client →</a>
+          <div className="qx-container">
+            <div className="qx-head qx-head-row">
+              <div>
+                <span className="qx-kicker">MCP</span>
+                <h2>Bring whichever agent you already like.</h2>
+              </div>
+              <div className="mcpx-intro">
+                <p>
+                  QaBox runs a local MCP server. Your agent reads the project&apos;s scans, cases and run history as
+                  tools, while the extension does the clicking.
+                </p>
+                <a className="qx-link-arrow" href="/docs#automation">Set up an MCP client →</a>
+              </div>
             </div>
             <AgentConnectionBeam />
           </div>
