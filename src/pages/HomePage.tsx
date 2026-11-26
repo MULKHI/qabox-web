@@ -5,6 +5,9 @@ import { ToolMarquee } from "../components/home/ToolMarquee";
 import { ProblemReveal } from "../components/home/ProblemReveal";
 import { HowItWorks } from "../components/home/HowItWorks";
 import { FeatureBento } from "../components/home/FeatureBento";
+import { ScanModes } from "../components/home/ScanModes";
+import { LocatorHealing } from "../components/home/LocatorHealing";
+import { Roadmap } from "../components/home/Roadmap";
 import { Faq, ClosingCta } from "../components/home/FaqCta";
 import { DesktopPrototype } from "../components/demos/DesktopPrototype";
 import { FailureInvestigationDemo } from "../components/demos/FailureInvestigationDemo";
@@ -18,6 +21,7 @@ export function HomePage() {
         <ToolMarquee />
         <ProblemReveal />
         <HowItWorks />
+        <ScanModes />
 
         <section className="qx-section qx-section-band" id="product">
           <div className="qx-container">
@@ -45,13 +49,15 @@ export function HomePage() {
               </p>
               <ul className="ticks">
                 <li><Search size={16} aria-hidden="true" /><span><b>Trace it</b> Failed scenarios stay linked to the logs and evidence that explain them.</span></li>
-                <li><ListChecks size={16} aria-hidden="true" /><span><b>Read the findings</b> Expected vs. actual, repro steps, and what changed since the last pass.</span></li>
-                <li><ShieldCheck size={16} aria-hidden="true" /><span><b>Sign it off</b> Nothing is filed until a person has reviewed it.</span></li>
+                <li><ListChecks size={16} aria-hidden="true" /><span><b>Read the findings</b> Likely root cause, repro steps, expected vs. actual and a suggested severity.</span></li>
+                <li><ShieldCheck size={16} aria-hidden="true" /><span><b>Sign it off</b> Nothing reaches developers until a person has reviewed it. Export as JSON, Markdown or PDF.</span></li>
               </ul>
             </div>
             <FailureInvestigationDemo />
           </div>
         </section>
+
+        <LocatorHealing />
 
         <section className="qx-section qx-section-band" id="agents">
           <div className="qx-container">
@@ -72,6 +78,7 @@ export function HomePage() {
           </div>
         </section>
 
+        <Roadmap />
         <Faq />
         <ClosingCta />
       </main>
